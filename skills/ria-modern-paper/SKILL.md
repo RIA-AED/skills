@@ -1,11 +1,13 @@
 ---
 name: ria-modern-paper
-description: Use when developing RIA self-hosted style modern Paper/Folia plugins — version targeting, async-first performance, Adventure 5.x messaging, Folia scheduler usage, data persistence, commands and permissions, and RIA in-game message styling. Trigger on requests to create or edit Paper plugins for RIA/ZTH servers, or when questions involve RIA plugin conventions.
+description: Use when developing RIA self-hosted style modern Paper/Folia plugins — version targeting, async-first performance, Adventure 5.x messaging, Folia scheduler usage, data persistence, commands and permissions, dependency handling, player-state recovery, README and release conventions, in-game verification, and RIA in-game message styling. Trigger on requests to create or edit Paper plugins for RIA/ZTH servers, or when questions involve RIA plugin conventions.
 ---
 
 # RIA 自用风格现代 Paper 插件开发
 
 本文档规范 RIA 团队（ZTH/Zeroth 服务器）自用插件的开发约定。适用于面向最新版本 Paper 服务端、并默认兼顾 Folia 兼容性的现代插件开发。
+
+文档中的条目大多属于推荐做法，不是硬性标准。只有明确写成「必须」「不允许」的要求才需要强制遵守；遇到与本文不一致的存量代码或特殊场景，按实际情况判断，不要为了「合规」去改动既有实现。
 
 ## 1. 平台与版本策略
 
@@ -82,6 +84,16 @@ Adventure 在 Paper 中已经内置，在处理消息样式时，优先使用 Ad
 
 选择建议：轻量、可忽略、即用即走的提示走点击式文字 UI（注意节流）；需要录入、多选、确认的较重交互走 Dialog；二者可组合。
 
+### 用 Dialog 做编辑器
+
+当 Dialog 用来编辑数据（编辑轨道、配置条目等）时，除了上面的排版要点，还应注意：
+
+- 不要把代码里的枚举名直接端给玩家；换成中文说法，需要时补一句悬浮说明。
+- 上一页 / 下一页可以用 `<-` 和 `->` 标注，这样能找得更快。
+- 有副作用的按钮要写清后果：如果「返回」实际是放弃修改，就写「取消」或「不保存并返回」。
+- 涉及坐标的字段最好提供「传送到此」、「设置为当前位置」这类便利选项。
+- 默认值选最符合直觉的选项。
+
 ### 与管理员交换复杂数据
 
 如果你要和管理员进行命令和聊天框难以进行的数据交换，包括 YAML、JSON 等复杂数据的交换，你可以使用 pastes.dev。这是一个由 lucko 维护的 paste bin，但是更易于阅读和编辑，完全免费，API 友好。你可以在这里看到接口文档：https://github.com/lucko/paste/blob/master/API.md
@@ -101,9 +113,18 @@ Adventure 在 Paper 中已经内置，在处理消息样式时，优先使用 Ad
 
 插件应该实现完整的命令补全，级别是参数级。
 
+### 帮助文本
+
+帮助不是命令列表，需要有排版：
+
+- 按功能分组，命令与说明分列对齐。对齐要按字体的像素宽度计算，不能按字符数，否则中英文混排会错位；每行控制在聊天栏宽度内。
+- 每条命令可点击填入，悬停显示用法说明；只列出调用者有权使用的子命令。
+- 参数细节放进单条命令的详情页，例如 `/插件名 help <子命令>`。
+- `<必填>` 与 `[可选]` 的写法在帮助、详情和报错中保持一致。
+
 ### 命令命名
 
-一般情况下，新建插件的命令建议以 /zth- 开头，如 /zth-preferences。这只是一个命名建议，并非硬性要求；如果命令本身已有合适的命名，或是在已存在的插件上增量开发，无需为了符合该前缀而改动既有命令。如果只是给管理员使用的命令，通常不需要再有其他 Alias。但是如果玩家也需要使用到这些命令，那么就必须要有好记的 Alias 如 /pref 等（尽量在英文上看起来美观，命令可以长，因为有 Tab 补全）
+一般情况下，新建插件的命令建议以 /zth- 开头，如 /zth-preferences。这只是一个命名建议，并非硬性要求；如果命令本身已有合适的命名，或是在已存在的插件上增量开发，无需为了符合该前缀而改动既有命令。如果只是给管理员使用的命令，通常不需要再有其他 Alias。但是如果玩家也需要使用到这些命令，那么就必须要有好记的 Alias 如 /pref 等（尽量在英文上看起来美观，命令可以长，因为有 Tab 补全）。
 
 ### 权限控制
 
@@ -115,6 +136,8 @@ Adventure 在 Paper 中已经内置，在处理消息样式时，优先使用 Ad
 
 插件的命名按照正常习惯即可。如果你不知道这个插件应该叫什么，可以先问一下用户，避免插件的名称太偏离插件的主要功能。插件名一旦定下，会牵动包名、模块与目录名、命令、权限节点和配置文件名，事后改名成本很高。
 
+Java 包名的根同样在开坑时确认：RIA 的域名是 ria.red，确定是 RIA 系的插件就用 `red.ria`；如果不是，先和用户确认。
+
 权限节点的根节点取自插件自身名称的小写形式，再按功能分层，例如插件 `MySpawn` 对应 `myspawn.setspawn`、`myspawn.command.set`。当然这里提到的都是推荐的做法。既有插件的权限节点如果不满足以上要求，还按照它原本的风格即可。不要为了统一风格而改名，否则会让服务器上已经配好的权限失效。
 
 对于 Zth 内部使用，完全不考虑其他服务器适配的插件，也可以使用 `Zth` 作为插件的开头。如果插件是为某年的特定活动而开发的，命名时把活动名与年份写进去，例如 `ZthSummerCamp2026Fishing`；不确定当届活动的正式名称时，同样先问用户。
@@ -122,6 +145,8 @@ Adventure 在 Paper 中已经内置，在处理消息样式时，优先使用 Ad
 ## 7. RIA 风格的游戏内消息
 
 除了前面提到的使用 Adventure 外，在设计插件的消息时要保持克制。不像传统的 Minecraft 服务器插件使用缤纷夺目的消息提醒，RIA 服务器尽量避免插件的消息打扰玩家。
+
+插件对用户侧的消息优先使用中文。
 
 本章给出的颜色与排版规范属于**建议**，主要适用于新消息的开发或大规模重构时对消息的重新设计，无需为了“合规”而逐一改动既有插件的存量消息代码。总体而言，只要不使用大量红色、绿色、蓝色、金色等鲜艳、刺激的颜色，其他偏柔和的配色体系一般都能接受。
 
@@ -220,3 +245,43 @@ RIA 的特殊物品通常带有统一落款（如活动产出物品），落款�
 > 正确示例（加空格）：
 > - 你已经加入到 Private 频道
 > - 未知的指令. 请尝试 /help 或者问问万能的其他玩家.
+
+## 8. 依赖与外部库
+
+插件自身不要 shade 依赖，除非确有必要。按依赖的性质分三种处理：
+
+1. 依赖本身是另一个 Paper 插件（如 PacketEvents、PlaceholderAPI）：只在 `depend` 或 `softdepend` 中声明，不要打包进自己的 jar。
+2. 普通的 Java 依赖：优先使用 Paper 内置的 `libraries` 机制在运行时下载，而不是塞进 jar。
+3. 以上都不适用时再考虑 shade。拿不准的时候，先和用户讨论。
+
+另外，避免直接写 NMS。插件写完之后通常不会有人定期维护，NMS 会随着服务端更新失效；优先使用稳定的 Paper API，或成熟协议库提供的封装。
+
+## 9. 玩家状态与恢复
+
+插件临时改动玩家状态（属性、游戏模式、飞行、药水效果、可见性等）时：
+
+- 保证所有退出路径都能恢复：正常结束、玩家中途退出、服务器崩溃等。
+- 假设第三方插件也会改动同一项状态，恢复逻辑要能应对这种情况，不要假设只有自己在改。
+- 很多插件的越权漏洞都是因为没有考虑到某些边界情况，要避免因状态管理写出 BUG。Minecraft 是一个十分复杂的状态机。
+
+## 10. 版本与发布
+
+- 版本号遵循语义化版本；第一个正式版本从 `1.0.0` 开始，之后按改动性质递增。
+- 每次发布在 GitHub 上打 tag 并创建 Release。
+- 是否实现兼容层可以和用户确认，因为很多插件只有 RIA 自己的服务器使用，可以在上线前让运维手动更新数据。
+
+## 11. README 与对外文档
+
+README 是插件的第一印象，读者是服主和其他想用这个插件的人，不是维护者。
+
+- 优先用中文写。结构按正常的开源插件仓库来：banner、简介、功能特性、环境要求、安装、快速开始、命令与权限、配置、开发者 API、FAQ。
+- 简介和卖点从服主、玩家的视角描述效果，不要堆算法名和实现术语；确实需要用到术语时，要么解释清楚，要么换成中文说法。
+- 不要写实现细节和开发过程（协议量化、插值算法、测试通过数量、实机验证记录等），这些对使用者没有意义。
+- 不要写会随版本过时的信息，例如插件版本号；版本兼容性写成 `26.1.2+` 这样的下界形式。
+
+## 12. 验证
+
+单元测试不能替代实机验证，涉及客户端表现的部分只有进游戏才能确认。
+
+- 在本地起对应版本的 Paper 服务器实机验证；声称支持 Folia 时，Folia 端也要实机跑一遍。
+- 需要自动化客户端时，可以用 horizon 作为测试客户端。horizon 是一个 Rust 重写的 Minecraft 客户端，和 Java 版号称 100% 兼容（当然，肯定不是 100%）。horizon 的好处是提供了 cli 和 mcp，可以很方便的控制它。
